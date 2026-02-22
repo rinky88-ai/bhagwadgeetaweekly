@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bhagavad Gita Shloka of the Week</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <section class="hero">
+      <div class="hero-layout">
+        <div>
+          <h1>Bhagavad Gita Shloka of the Week</h1>
+          <p class="sub">A fresh shloka appears every week. Choose transliteration language and age group to get a personalized spiritual explanation.</p>
+        </div>
+        <div class="krishna-art" aria-label="Illustration of Lord Krishna" role="img">
+          <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#5bb5ff" />
+                <stop offset="100%" stop-color="#2b86e3" />
+              </linearGradient>
+              <linearGradient id="crown" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#ffd25e" />
+                <stop offset="100%" stop-color="#f9a825" />
+              </linearGradient>
+            </defs>
+
+            <circle cx="110" cy="110" r="98" fill="#fff8da"/>
+            <ellipse cx="172" cy="42" rx="22" ry="38" fill="#2aa84a"/>
+            <ellipse cx="174" cy="45" rx="14" ry="28" fill="#1f7fcc"/>
+            <circle cx="172" cy="46" r="5" fill="#ffe45a"/>
+
+            <rect x="66" y="52" width="88" height="28" rx="14" fill="url(#crown)"/>
+            <circle cx="110" cy="84" r="48" fill="url(#skin)"/>
+            <circle cx="92" cy="82" r="5" fill="#1e2b45"/>
+            <circle cx="128" cy="82" r="5" fill="#1e2b45"/>
+            <path d="M93 106 Q110 118 127 106" stroke="#1e2b45" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <circle cx="110" cy="92" r="3.5" fill="#ffb3c7"/>
+
+            <path d="M56 138 Q110 118 164 138 L154 184 Q110 198 66 184 Z" fill="#ffbe55"/>
+            <path d="M72 146 Q110 136 148 146" stroke="#ff8a4a" stroke-width="5" fill="none"/>
+            <path d="M38 120 Q70 132 98 132" stroke="#d88c42" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <circle cx="38" cy="120" r="6" fill="#d88c42"/>
+            <path d="M122 132 Q156 132 186 118" stroke="#d88c42" stroke-width="6" fill="none" stroke-linecap="round"/>
+            <circle cx="186" cy="118" r="6" fill="#d88c42"/>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="week-controls">
+        <button id="prevWeekBtn" type="button">Previous Week</button>
+        <div id="weekInfo" class="meta"></div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label for="translitLang">Select Translation Language</label>
+          <select id="translitLang">
+            <option value="english">English</option>
+            <option value="hindi">Hindi</option>
+            <option value="tamil">Tamil</option>
+            <option value="bengali">Bengali</option>
+            <option value="oriya">Oriya</option>
+            <option value="gujarati">Gujarati</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="ageGroup">Age Group</label>
+          <select id="ageGroup">
+            <option value="5-7">5-7</option>
+            <option value="8-10">8-10</option>
+            <option value="10-14">10-14</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-title-row">
+        <h2 class="section-title">Sanskrit Shloka</h2>
+        <button id="speakSanskritBtn" class="speaker-btn" type="button" aria-label="Speak Sanskrit shloka">&#128266;</button>
+      </div>
+      <div id="sanskrit" class="sloka"></div>
+      <div id="ref" class="meta"></div>
+      <div id="speechStatus" class="meta"></div>
+
+      <h2 class="section-title mt14">Transliteration</h2>
+      <div id="transliteration" class="sloka"></div>
+
+      <h2 class="section-title mt14">Spiritual Meaning (Age-Specific)</h2>
+      <div id="meaning" class="sloka"></div>
+
+      <h2 class="section-title mt14">Wisdom Corner</h2>
+      <div id="wisdom" class="wisdom"></div>
+      <div id="aiStatus" class="meta"></div>
+    </section>
+
+    <section class="panel">
+      <h2 class="section-title">Share Your Reflection</h2>
+      <div class="row">
+        <div>
+          <label for="name">Your Name</label>
+          <input id="name" placeholder="Enter your name" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="thought">Your Thought on this Shloka</label>
+          <textarea id="thought" placeholder="What touched you in this verse?"></textarea>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="practice">How will you apply it in life?</label>
+          <textarea id="practice" placeholder="One practical step you will take"></textarea>
+        </div>
+      </div>
+      <button id="postBtn" type="button">Post Comment</button>
+      <div id="status" class="status"></div>
+
+      <h3 class="section-title mt14">Community Comments</h3>
+      <div id="comments"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

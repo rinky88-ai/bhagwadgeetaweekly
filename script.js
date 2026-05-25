@@ -609,42 +609,54 @@ if (shlokas.length !== YEAR_CYCLE_WEEKS) {
   throw new Error(`Expected ${YEAR_CYCLE_WEEKS} unique shlokas, found ${shlokas.length}.`);
 }
 
-const wisdomByLanguage = {
-  english: "Wisdom grows when action, compassion, and self-control come together in daily life.",
-  hindi: "जब कर्म, करुणा और आत्मसंयम साथ चलते हैं, तब सच्चा ज्ञान जीवन में प्रकट होता है।",
-  tamil: "செயல், கருணை, சுய கட்டுப்பாடு ஒன்றாகும் போது தான் உண்மையான ஞானம் வாழ்க்கையில் மலர்கிறது.",
-  bengali: "যখন কর্ম, করুণা ও আত্মসংযম একসাথে চলে, তখনই জীবনে প্রকৃত জ্ঞান প্রস্ফুটিত হয়।",
-  oriya: "କର୍ମ, କରୁଣା ଓ ଆତ୍ମସଂୟମ ଏକସାଥିରେ ଚାଲିଲେ ଜୀବନରେ ସତ୍ୟ ଜ୍ଞାନ ଫୁଟିଉଠେ।",
-  gujarati: "જ્યારે કર્મ, કરુણા અને આત્મસંયમ સાથે ચાલે છે ત્યારે જીવનમાં સાચું જ્ઞાન પ્રગટે છે."
-};
-
+const landingPage = document.getElementById("landingPage");
+const quotePage = document.getElementById("quotePage");
+const welcomeForm = document.getElementById("welcomeForm");
+const learnerNameInput = document.getElementById("learnerName");
+const learnerAgeInput = document.getElementById("learnerAge");
+const welcomeStatusEl = document.getElementById("welcomeStatus");
+const learnerGreetingEl = document.getElementById("learnerGreeting");
 const translitSelect = document.getElementById("translitLang");
-const ageGroupSelect = document.getElementById("ageGroup");
 const sanskritEl = document.getElementById("sanskrit");
 const translitEl = document.getElementById("transliteration");
 const meaningEl = document.getElementById("meaning");
 const refEl = document.getElementById("ref");
-const wisdomEl = document.getElementById("wisdom");
 const aiStatusEl = document.getElementById("aiStatus");
-const speechStatusEl = document.getElementById("speechStatus");
-const speakSanskritBtn = document.getElementById("speakSanskritBtn");
 const prevWeekBtn = document.getElementById("prevWeekBtn");
 const weekInfoEl = document.getElementById("weekInfo");
-
-const nameInput = document.getElementById("name");
-const thoughtInput = document.getElementById("thought");
-const practiceInput = document.getElementById("practice");
-const postBtn = document.getElementById("postBtn");
-const commentsEl = document.getElementById("comments");
-const statusEl = document.getElementById("status");
+const dbStatusEl = document.getElementById("dbStatus");
 
 let weekOffset = 0;
 let renderRequestId = 0;
-const AI_CACHE_PREFIX = "gita-ai-v1";
-let activeUtterance = null;
-let sanskritVoice = null;
-const sanskritAudio = new Audio();
-let sanskritAudioUrl = null;
+const AI_CACHE_PREFIX = "gita-ai-v4";
+const dbWeekCache = new Map();
+const DB_YEAR = 2026;
+let learner = null;
+
+function getAgeGroupForAge(age) {
+  if (age <= 7) {
+    return "5-7";
+  }
+  if (age <= 10) {
+    return "8-10";
+  }
+  if (age <= 14) {
+    return "10-14";
+  }
+  return "14+";
+}
+
+function getActiveAgeGroup() {
+  return learner?.ageGroup || "10-14";
+}
+
+function updateLearnerHeader() {
+  if (!learner) {
+    return;
+  }
+
+  learnerGreetingEl.textContent = `Namaste, ${learner.name}`;
+}
 
 function getWeekIndex() {
   const epoch = new Date("2024-01-01T00:00:00Z");
@@ -662,8 +674,41 @@ function getDisplayedCycleSlot() {
   return ((absolute % YEAR_CYCLE_WEEKS) + YEAR_CYCLE_WEEKS) % YEAR_CYCLE_WEEKS;
 }
 
-function getCurrentShloka() {
-  return shlokas[getDisplayedCycleSlot()];
+function normalizeDbShloka(row) {
+  return {
+    reference: row.reference,
+    sanskrit: row.sanskrit,
+    transliteration: row.transliteration || {},
+    translation: row.translation || {}
+  };
+}
+
+async function fetchShlokaFromDatabase(weekNumber) {
+  const response = await fetch(`/api/weekly-shloka?year=${DB_YEAR}&weekNumber=${weekNumber}`);
+  if (!response.ok) {
+    throw new Error(`DB request failed: ${response.status}`);
+  }
+
+  const data = await response.json();
+  if (!data?.reference || !data?.sanskrit) {
+    throw new Error("DB response format invalid.");
+  }
+
+  return normalizeDbShloka(data);
+}
+
+async function getShlokaForRender(weekNumber) {
+  if (dbWeekCache.has(weekNumber)) {
+    return { shloka: dbWeekCache.get(weekNumber), source: "database-cache" };
+  }
+
+  try {
+    const dbShloka = await fetchShlokaFromDatabase(weekNumber);
+    dbWeekCache.set(weekNumber, dbShloka);
+    return { shloka: dbShloka, source: "database" };
+  } catch {
+    return { shloka: shlokas[weekNumber - 1], source: "built-in" };
+  }
 }
 
 function getFallbackTransliteration(shloka, lang) {
@@ -671,11 +716,26 @@ function getFallbackTransliteration(shloka, lang) {
 }
 
 function getFallbackContent(shloka, lang, ageGroup) {
+  const explanation = shloka.translation?.[ageGroup] || shloka.meanings?.[ageGroup];
   return {
     transliteration: getFallbackTransliteration(shloka, lang),
-    explanation: shloka.meanings[ageGroup],
-    wisdomMessage: wisdomByLanguage[lang] || wisdomByLanguage.english
+    explanation
   };
+}
+
+function formatTransliterationForDisplay(text) {
+  const normalized = String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized
+    .replace(/\s*(\|\||॥)\s*/g, "$1\n")
+    .replace(/\s*(\||।)\s*/g, "$1\n")
+    .trim();
 }
 
 function getAICacheKey(shloka, lang, ageGroup) {
@@ -714,7 +774,7 @@ async function fetchAIContent(shloka, lang, ageGroup) {
   }
 
   const data = await response.json();
-  if (!data || !data.transliteration || !data.explanation || !data.wisdomMessage) {
+  if (!data || !data.transliteration || !data.explanation) {
     throw new Error("AI response format invalid.");
   }
 
@@ -731,367 +791,63 @@ function renderWeekInfo() {
   prevWeekBtn.disabled = weekOffset >= YEAR_CYCLE_WEEKS - 1;
 }
 
-function getBestSanskritVoice(voices) {
-  if (!voices || !voices.length) {
-    return null;
-  }
-
-  const preferredLangs = ["sa-IN", "hi-IN", "mr-IN", "bn-IN", "gu-IN", "en-IN"];
-  for (const lang of preferredLangs) {
-    const exact = voices.find((voice) => voice.lang === lang);
-    if (exact) {
-      return exact;
-    }
-  }
-
-  for (const lang of preferredLangs) {
-    const prefix = lang.split("-")[0];
-    const match = voices.find((voice) => voice.lang.toLowerCase().startsWith(prefix));
-    if (match) {
-      return match;
-    }
-  }
-
-  return voices[0];
-}
-
-function resolveSanskritVoice() {
-  if (!("speechSynthesis" in window)) {
-    return null;
-  }
-
-  sanskritVoice = getBestSanskritVoice(window.speechSynthesis.getVoices());
-  return sanskritVoice;
-}
-
-function updateSpeakButton(isSpeaking) {
-  if (!speakSanskritBtn) {
-    return;
-  }
-
-  speakSanskritBtn.disabled = false;
-  if (isSpeaking) {
-    speakSanskritBtn.innerHTML = "Stop";
-    speakSanskritBtn.setAttribute("aria-label", "Stop Sanskrit shloka audio");
-  } else {
-    speakSanskritBtn.innerHTML = "&#128266;";
-    speakSanskritBtn.setAttribute("aria-label", "Speak Sanskrit shloka");
-  }
-}
-
-function stopSpeech() {
-  if ("speechSynthesis" in window) {
-    window.speechSynthesis.cancel();
-  }
-  activeUtterance = null;
-  sanskritAudio.pause();
-  sanskritAudio.currentTime = 0;
-  if (sanskritAudioUrl) {
-    URL.revokeObjectURL(sanskritAudioUrl);
-    sanskritAudioUrl = null;
-  }
-  updateSpeakButton(false);
-}
-
-async function fetchSanskritAudioBlob(text) {
-  const response = await fetch("/api/sanskrit-audio", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ text })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Audio request failed: ${response.status}`);
-  }
-
-  return response.blob();
-}
-
-function speakWithBrowserFallback(text) {
-  if (!("speechSynthesis" in window)) {
-    throw new Error("Browser speech not available.");
-  }
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  const voice = sanskritVoice || resolveSanskritVoice();
-  utterance.lang = voice?.lang || "hi-IN";
-  if (voice) {
-    utterance.voice = voice;
-  }
-  utterance.rate = 0.86;
-  utterance.pitch = 1;
-
-  utterance.onstart = () => {
-    speechStatusEl.textContent = "Playing Sanskrit pronunciation...";
-  };
-  utterance.onend = () => {
-    activeUtterance = null;
-    updateSpeakButton(false);
-    speechStatusEl.textContent = "Audio finished.";
-  };
-  utterance.onerror = () => {
-    activeUtterance = null;
-    updateSpeakButton(false);
-    speechStatusEl.textContent = "Could not play pronunciation.";
-  };
-
-  activeUtterance = utterance;
-  window.speechSynthesis.speak(utterance);
-}
-
-async function speakCurrentSanskrit() {
-  const text = sanskritEl.textContent.trim();
-  if (!text) {
-    speechStatusEl.textContent = "No shloka text to speak.";
-    return;
-  }
-
-  if (activeUtterance || !sanskritAudio.paused) {
-    stopSpeech();
-    speechStatusEl.textContent = "Audio stopped.";
-    return;
-  }
-
-  updateSpeakButton(true);
-  speechStatusEl.textContent = "Preparing audio...";
-
-  try {
-    const audioBlob = await fetchSanskritAudioBlob(text);
-    if (sanskritAudioUrl) {
-      URL.revokeObjectURL(sanskritAudioUrl);
-    }
-    sanskritAudioUrl = URL.createObjectURL(audioBlob);
-    sanskritAudio.src = sanskritAudioUrl;
-    sanskritAudio.onended = () => {
-      updateSpeakButton(false);
-      speechStatusEl.textContent = "Audio finished.";
-    };
-    sanskritAudio.onerror = () => {
-      updateSpeakButton(false);
-      speechStatusEl.textContent = "Could not play generated audio.";
-    };
-    await sanskritAudio.play();
-    speechStatusEl.textContent = "Playing Sanskrit pronunciation...";
-    return;
-  } catch {
-    stopSpeech();
-  }
-
-  try {
-    updateSpeakButton(true);
-    speakWithBrowserFallback(text);
-  } catch {
-    updateSpeakButton(false);
-    speechStatusEl.textContent = "Audio unavailable. Check API key or browser speech support.";
-  }
-}
-
 function renderShlokaStatic(shloka, lang, ageGroup, weekNumber) {
   const fallback = getFallbackContent(shloka, lang, ageGroup);
 
   sanskritEl.textContent = shloka.sanskrit;
   refEl.textContent = `${shloka.reference} | Week ${weekNumber} of ${YEAR_CYCLE_WEEKS}`;
-  translitEl.textContent = fallback.transliteration;
+  translitEl.textContent = formatTransliterationForDisplay(fallback.transliteration);
   meaningEl.textContent = fallback.explanation;
-  wisdomEl.textContent = fallback.wisdomMessage;
-  speechStatusEl.textContent = "";
 }
 
 async function renderShloka() {
-  const requestId = ++renderRequestId;
-  const shloka = getCurrentShloka();
-  const lang = translitSelect.value;
-  const ageGroup = ageGroupSelect.value;
-  const weekNumber = getDisplayedCycleSlot() + 1;
-
-  renderShlokaStatic(shloka, lang, ageGroup, weekNumber);
-  renderWeekInfo();
-
-  const cached = readAICache(shloka, lang, ageGroup);
-  if (cached) {
-    translitEl.textContent = cached.transliteration;
-    meaningEl.textContent = cached.explanation;
-    wisdomEl.textContent = cached.wisdomMessage;
-    aiStatusEl.textContent = "AI generated content loaded from cache.";
-    return;
-  }
-
-  aiStatusEl.textContent = "Generating transliteration and explanation with GPT...";
-
   try {
-    const aiContent = await fetchAIContent(shloka, lang, ageGroup);
-    writeAICache(shloka, lang, ageGroup, aiContent);
-    if (requestId !== renderRequestId) {
+    const requestId = ++renderRequestId;
+    const lang = translitSelect.value;
+    const ageGroup = getActiveAgeGroup();
+    const weekNumber = getDisplayedCycleSlot() + 1;
+    const { shloka, source } = await getShlokaForRender(weekNumber);
+
+    renderShlokaStatic(shloka, lang, ageGroup, weekNumber);
+    renderWeekInfo();
+    dbStatusEl.textContent =
+      source === "database" || source === "database-cache"
+        ? `Shloka source: Neon DB (year ${DB_YEAR})`
+        : "Shloka source: built-in weekly set";
+
+    const cached = readAICache(shloka, lang, ageGroup);
+    if (cached) {
+      translitEl.textContent = formatTransliterationForDisplay(cached.transliteration);
+      meaningEl.textContent = cached.explanation;
+      aiStatusEl.textContent = "AI generated content loaded from cache.";
       return;
     }
 
-    translitEl.textContent = aiContent.transliteration;
-    meaningEl.textContent = aiContent.explanation;
-    wisdomEl.textContent = aiContent.wisdomMessage;
-    aiStatusEl.textContent = "Generated with GPT.";
-  } catch {
-    if (requestId !== renderRequestId) {
-      return;
+    aiStatusEl.textContent = "Generating age-appropriate explanation with GPT...";
+
+    try {
+      const aiContent = await fetchAIContent(shloka, lang, ageGroup);
+      writeAICache(shloka, lang, ageGroup, aiContent);
+      if (requestId !== renderRequestId) {
+        return;
+      }
+
+      translitEl.textContent = formatTransliterationForDisplay(aiContent.transliteration);
+      meaningEl.textContent = aiContent.explanation;
+      aiStatusEl.textContent = "Generated with GPT.";
+    } catch {
+      if (requestId !== renderRequestId) {
+        return;
+      }
+      aiStatusEl.textContent = "AI unavailable. Showing built-in content.";
     }
-    aiStatusEl.textContent = "AI unavailable. Showing built-in content.";
-  }
-}
-
-function getStorageKey() {
-  return `comments-week-${getDisplayedAbsoluteWeekIndex()}`;
-}
-
-function loadComments() {
-  const key = getStorageKey();
-  try {
-    return JSON.parse(localStorage.getItem(key)) || [];
   } catch {
-    return [];
-  }
-}
-
-function saveComments(comments) {
-  localStorage.setItem(getStorageKey(), JSON.stringify(comments));
-}
-
-function renderComments() {
-  const comments = loadComments();
-  if (!comments.length) {
-    commentsEl.innerHTML = '<p class="empty">No comments yet. Be the first to share your reflection.</p>';
-    return;
-  }
-
-  commentsEl.innerHTML = comments
-    .slice()
-    .reverse()
-    .map((c) => `
-      <article class="comment">
-        <p><strong>${escapeHtml(c.name)}</strong> <span class="meta">(${escapeHtml(c.date)})</span></p>
-        <p>${escapeHtml(c.thought)}</p>
-        <p><strong>My practice:</strong> ${escapeHtml(c.practice)}</p>
-        <div class="comment-actions">
-          <button type="button" data-action="edit" data-id="${escapeHtml(c.id)}">Edit</button>
-          <button type="button" class="delete" data-action="delete" data-id="${escapeHtml(c.id)}">Delete</button>
-        </div>
-      </article>
-    `)
-    .join("");
-}
-
-function escapeHtml(text) {
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-function postComment() {
-  const name = nameInput.value.trim();
-  const thought = thoughtInput.value.trim();
-  const practice = practiceInput.value.trim();
-
-  if (!name || !thought || !practice) {
-    statusEl.textContent = "Please fill all fields before posting.";
-    return;
-  }
-
-  const comments = loadComments();
-  comments.push({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    name,
-    thought,
-    practice,
-    date: new Date().toLocaleString()
-  });
-
-  saveComments(comments);
-  renderComments();
-
-  nameInput.value = "";
-  thoughtInput.value = "";
-  practiceInput.value = "";
-  statusEl.textContent = "Comment posted successfully.";
-}
-
-function editComment(commentId) {
-  const comments = loadComments();
-  const index = comments.findIndex((c) => c.id === commentId);
-  if (index === -1) {
-    statusEl.textContent = "Comment not found.";
-    return;
-  }
-
-  const current = comments[index];
-  const updatedThought = prompt("Edit your thought:", current.thought);
-  if (updatedThought === null) {
-    return;
-  }
-
-  const updatedPractice = prompt("Edit your practice step:", current.practice);
-  if (updatedPractice === null) {
-    return;
-  }
-
-  const cleanThought = updatedThought.trim();
-  const cleanPractice = updatedPractice.trim();
-
-  if (!cleanThought || !cleanPractice) {
-    statusEl.textContent = "Edited comment cannot be empty.";
-    return;
-  }
-
-  comments[index] = {
-    ...current,
-    thought: cleanThought,
-    practice: cleanPractice,
-    date: `${current.date} (edited ${new Date().toLocaleDateString()})`
-  };
-
-  saveComments(comments);
-  renderComments();
-  statusEl.textContent = "Comment updated.";
-}
-
-function deleteComment(commentId) {
-  const comments = loadComments();
-  const filtered = comments.filter((c) => c.id !== commentId);
-  if (filtered.length === comments.length) {
-    statusEl.textContent = "Comment not found.";
-    return;
-  }
-
-  saveComments(filtered);
-  renderComments();
-  statusEl.textContent = "Comment deleted.";
-}
-
-function handleCommentActions(event) {
-  const target = event.target.closest("button[data-action]");
-  if (!target) {
-    return;
-  }
-
-  const action = target.getAttribute("data-action");
-  const commentId = target.getAttribute("data-id");
-
-  if (!commentId) {
-    return;
-  }
-
-  if (action === "edit") {
-    editComment(commentId);
-    return;
-  }
-
-  if (action === "delete") {
-    const confirmed = confirm("Delete this comment?");
-    if (confirmed) {
-      deleteComment(commentId);
-    }
+    sanskritEl.textContent = "";
+    refEl.textContent = "";
+    translitEl.textContent = "";
+    meaningEl.textContent = "";
+    dbStatusEl.textContent = `Could not fetch week data from Neon DB (year ${DB_YEAR}). Run migration first.`;
+    aiStatusEl.textContent = "";
   }
 }
 
@@ -1099,23 +855,33 @@ function showPreviousWeek() {
   if (weekOffset < YEAR_CYCLE_WEEKS - 1) {
     weekOffset += 1;
     renderShloka();
-    renderComments();
-    statusEl.textContent = "";
   }
 }
 
-translitSelect.addEventListener("change", renderShloka);
-ageGroupSelect.addEventListener("change", renderShloka);
-postBtn.addEventListener("click", postComment);
-prevWeekBtn.addEventListener("click", showPreviousWeek);
-commentsEl.addEventListener("click", handleCommentActions);
-speakSanskritBtn.addEventListener("click", speakCurrentSanskrit);
+function startWeeklyWisdom(event) {
+  event.preventDefault();
 
-if ("speechSynthesis" in window) {
-  resolveSanskritVoice();
-  window.speechSynthesis.onvoiceschanged = resolveSanskritVoice;
+  const name = learnerNameInput.value.trim();
+  const age = Number(learnerAgeInput.value);
+
+  if (!name || !Number.isInteger(age) || age < 5 || age > 18) {
+    welcomeStatusEl.textContent = "Please enter a name and an age from 5 to 18.";
+    return;
+  }
+
+  learner = {
+    name,
+    age,
+    ageGroup: getAgeGroupForAge(age)
+  };
+
+  updateLearnerHeader();
+  landingPage.hidden = true;
+  quotePage.hidden = false;
+  renderShloka();
+  quotePage.scrollIntoView({ block: "start" });
 }
-updateSpeakButton(false);
 
-renderShloka();
-renderComments();
+welcomeForm.addEventListener("submit", startWeeklyWisdom);
+translitSelect.addEventListener("change", renderShloka);
+prevWeekBtn.addEventListener("click", showPreviousWeek);

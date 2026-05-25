@@ -1,6 +1,45 @@
-﻿const http = require("http");
+const http = require("http");
 const fs = require("fs");
 const path = require("path");
+
+function loadDotEnv() {
+  const envPath = path.join(process.cwd(), ".env");
+  if (!fs.existsSync(envPath)) {
+    return;
+  }
+
+  const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+
+    const equalsIndex = line.indexOf("=");
+    if (equalsIndex <= 0) {
+      continue;
+    }
+
+    const key = line.slice(0, equalsIndex).trim();
+    if (!key || Object.prototype.hasOwnProperty.call(process.env, key)) {
+      continue;
+    }
+
+    let value = line.slice(equalsIndex + 1).trim();
+    if (
+      (value.startsWith("\"") && value.endsWith("\"")) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
+
+loadDotEnv();
+
+const { prisma } = require("./lib/db");
+const { loadShlokaRowsFromScript } = require("./lib/loadShlokas");
 
 const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -10,7 +49,8 @@ const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8"
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png"
 };
 
 function sendJson(res, statusCode, payload) {
@@ -60,6 +100,19 @@ function parseJsonBody(req) {
   });
 }
 
+function parseUrl(req) {
+  return new URL(req.url, `http://${req.headers.host || "localhost"}`);
+}
+
+function getCurrentCycleWeekNumber() {
+  const epoch = new Date("2024-01-01T00:00:00Z");
+  const now = new Date();
+  const msInWeek = 7 * 24 * 60 * 60 * 1000;
+  const YEAR_CYCLE_WEEKS = 52;
+  const absoluteWeek = Math.floor((now - epoch) / msInWeek);
+  return ((absoluteWeek % YEAR_CYCLE_WEEKS) + YEAR_CYCLE_WEEKS) % YEAR_CYCLE_WEEKS + 1;
+}
+
 function buildPrompt(input) {
   return [
     `Reference: ${input.reference}`,
@@ -82,10 +135,9 @@ async function generateInsight(input) {
       additionalProperties: false,
       properties: {
         transliteration: { type: "string" },
-        explanation: { type: "string" },
-        wisdomMessage: { type: "string" }
+        explanation: { type: "string" }
       },
-      required: ["transliteration", "explanation", "wisdomMessage"]
+      required: ["transliteration", "explanation"]
     }
   };
 
@@ -106,8 +158,7 @@ async function generateInsight(input) {
             "Task:",
             "1) Provide accurate transliteration of the Sanskrit shloka into the requested transliteration language style.",
             "2) Provide a spiritual explanation suitable for the requested age group.",
-            "3) Provide a short wisdom corner message in the selected transliteration language.",
-            "Keep explanation understandable and concise."
+            "Keep the explanation specific to the shloka, child-friendly, concrete, and concise."
           ].join(" ")
         },
         {
@@ -140,41 +191,27 @@ async function generateInsight(input) {
     throw new Error("OpenAI JSON parse failed.");
   }
 
-  if (!parsed.transliteration || !parsed.explanation || !parsed.wisdomMessage) {
+  if (!parsed.transliteration || !parsed.explanation) {
     throw new Error("OpenAI JSON missing required fields.");
   }
 
   return parsed;
 }
 
-async function generateSanskritAudio(text) {
-  if (!OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY is not set.");
-  }
-
-  const response = await fetch("https://api.openai.com/v1/audio/speech", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini-tts",
-      voice: "alloy",
-      input: text,
-      response_format: "mp3"
-    })
-  });
-
-  if (!response.ok) {
-    const textBody = await response.text();
-    throw new Error(`OpenAI TTS failed: ${response.status} ${textBody}`);
-  }
-
-  return Buffer.from(await response.arrayBuffer());
+function normalizeDbSloka(row) {
+  return {
+    year: row.year,
+    week_number: row.weekNumber,
+    reference: row.reference,
+    sanskrit: row.sanskrit,
+    transliteration: row.transliteration || {},
+    translation: row.translation || {}
+  };
 }
 
 const server = http.createServer(async (req, res) => {
+  const url = parseUrl(req);
+
   if (req.method === "POST" && req.url === "/api/gita-insight") {
     try {
       const body = await parseJsonBody(req);
@@ -193,24 +230,103 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "POST" && req.url === "/api/sanskrit-audio") {
+  if (req.method === "GET" && url.pathname === "/api/weekly-shloka") {
     try {
-      const body = await parseJsonBody(req);
-      const text = String(body?.text || "").trim();
-      if (!text) {
-        sendJson(res, 400, { error: "Missing required field: text" });
+      const requestedYear = Number(url.searchParams.get("year"));
+      const requestedWeekNumber = Number(url.searchParams.get("weekNumber"));
+      const year = Number.isInteger(requestedYear) && requestedYear > 0 ? requestedYear : 2026;
+      const weekNumber =
+        Number.isInteger(requestedWeekNumber) && requestedWeekNumber >= 1 && requestedWeekNumber <= 52
+          ? requestedWeekNumber
+          : getCurrentCycleWeekNumber();
+
+      const row = await prisma.bhagwadgitaSloka.findUnique({
+        where: {
+          year_week_number: {
+            year,
+            weekNumber
+          }
+        }
+      });
+
+      if (!row) {
+        sendJson(res, 404, { error: `No shloka found for year ${year}, week ${weekNumber}` });
         return;
       }
 
-      const audioBuffer = await generateSanskritAudio(text);
-      res.writeHead(200, {
-        "Content-Type": "audio/mpeg",
-        "Content-Length": audioBuffer.length,
-        "Cache-Control": "no-store"
-      });
-      res.end(audioBuffer);
+      sendJson(res, 200, normalizeDbSloka(row));
     } catch (err) {
       sendJson(res, 500, { error: err.message || "Server error" });
+    }
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/weekly-shlokas/sync") {
+    try {
+      const body = await parseJsonBody(req);
+      const year = Number.isInteger(Number(body?.year)) ? Number(body.year) : 2026;
+      const requestedRows = Array.isArray(body?.shlokas) ? body.shlokas : null;
+
+      const sourceRows = requestedRows?.length
+        ? requestedRows.map((item) => ({
+            year,
+            weekNumber: Number(item.week_number),
+            reference: String(item.reference || "").trim(),
+            sanskrit: String(item.sanskrit || "").trim(),
+            transliteration: item.transliteration || {},
+            translation: item.translation || item.meanings || {}
+          }))
+        : loadShlokaRowsFromScript().map((item) => ({
+            ...item,
+            year
+          }));
+
+      const invalid = sourceRows.find(
+        (item) =>
+          !Number.isInteger(item.weekNumber) ||
+          item.weekNumber < 1 ||
+          item.weekNumber > 52 ||
+          !item.reference ||
+          !item.sanskrit
+      );
+      if (invalid) {
+        sendJson(res, 400, { error: "Each row needs week_number(1-52), reference, and sanskrit." });
+        return;
+      }
+
+      await prisma.$transaction(
+        sourceRows.map((item) =>
+          prisma.bhagwadgitaSloka.upsert({
+            where: {
+              year_week_number: {
+                year: item.year,
+                weekNumber: item.weekNumber
+              }
+            },
+            update: {
+              reference: item.reference,
+              sanskrit: item.sanskrit,
+              transliteration: item.transliteration,
+              translation: item.translation
+            },
+            create: item
+          })
+        )
+      );
+
+      sendJson(res, 200, { inserted: sourceRows.length, year });
+    } catch (err) {
+      sendJson(res, 500, { error: err.message || "Server error" });
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/health/db") {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      sendJson(res, 200, { ok: true });
+    } catch (err) {
+      sendJson(res, 500, { ok: false, error: err.message || "Database unavailable" });
     }
     return;
   }
@@ -226,3 +342,4 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+

@@ -3,16 +3,44 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bhagavad Gita Shloka of the Week</title>
+  <title>Bhagwad Gita Weekly</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <main class="container">
+  <section id="landingPage" class="landing-page">
+    <div class="landing-shell">
+      <div class="landing-copy">
+        <p class="eyebrow">Bhagwad Geeta Sloka of the Week</p>
+        <h1>Welcome to Bhagwad Geeta Sloka of the Week</h1>
+        <p class="sub">Learn, Reflect, Grow with Krishna by your side.</p>
+
+        <form id="welcomeForm" class="welcome-form">
+          <div>
+            <label for="learnerName">Your Name</label>
+            <input id="learnerName" name="learnerName" type="text" placeholder="Enter your name" autocomplete="name" required />
+          </div>
+          <div>
+            <label for="learnerAge">Your Age</label>
+            <input id="learnerAge" name="learnerAge" type="number" min="5" max="18" placeholder="Enter your age" required />
+          </div>
+          <button id="welcomeSubmit" type="submit">Begin Weekly Sloka</button>
+          <div id="welcomeStatus" class="status" aria-live="polite"></div>
+        </form>
+      </div>
+
+      <div class="landing-krishna" aria-label="Transcendental form of Krishna playing a flute" role="img">
+        <img src="assets/krishna-landing.png" alt="Transcendental Krishna playing a flute" />
+      </div>
+    </div>
+  </section>
+
+  <main id="quotePage" class="container app-page" hidden>
     <section class="hero">
       <div class="hero-layout">
         <div>
-          <h1>Bhagavad Gita Shloka of the Week</h1>
-          <p class="sub">A fresh shloka appears every week. Choose transliteration language and age group to get a personalized spiritual explanation.</p>
+          <p id="learnerGreeting" class="eyebrow"></p>
+          <h1>Bhagwad Gita Weekly</h1>
+          <p class="sub">A fresh shloka appears every week with a spiritual explanation for your age.</p>
         </div>
         <div class="krishna-art" aria-label="Illustration of Lord Krishna" role="img">
           <svg viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
@@ -55,8 +83,11 @@
         <button id="prevWeekBtn" type="button">Previous Week</button>
         <div id="weekInfo" class="meta"></div>
       </div>
+      <div class="db-tools">
+        <div id="dbStatus" class="meta"></div>
+      </div>
 
-      <div class="row">
+      <div class="row controls-row">
         <div>
           <label for="translitLang">Select Translation Language</label>
           <select id="translitLang">
@@ -68,61 +99,26 @@
             <option value="gujarati">Gujarati</option>
           </select>
         </div>
+      </div>
 
-        <div>
-          <label for="ageGroup">Age Group</label>
-          <select id="ageGroup">
-            <option value="5-7">5-7</option>
-            <option value="8-10">8-10</option>
-            <option value="10-14">10-14</option>
-          </select>
+      <section class="quote-section">
+        <div class="section-title-row">
+          <h2 class="section-title">Sanskrit Shloka</h2>
         </div>
-      </div>
+        <div id="sanskrit" class="sloka"></div>
+        <div id="ref" class="meta"></div>
+      </section>
 
-      <div class="section-title-row">
-        <h2 class="section-title">Sanskrit Shloka</h2>
-        <button id="speakSanskritBtn" class="speaker-btn" type="button" aria-label="Speak Sanskrit shloka">&#128266;</button>
-      </div>
-      <div id="sanskrit" class="sloka"></div>
-      <div id="ref" class="meta"></div>
-      <div id="speechStatus" class="meta"></div>
+      <section class="quote-section">
+        <h2 class="section-title">Transliteration</h2>
+        <div id="transliteration" class="sloka"></div>
+      </section>
 
-      <h2 class="section-title mt14">Transliteration</h2>
-      <div id="transliteration" class="sloka"></div>
-
-      <h2 class="section-title mt14">Spiritual Meaning (Age-Specific)</h2>
-      <div id="meaning" class="sloka"></div>
-
-      <h2 class="section-title mt14">Wisdom Corner</h2>
-      <div id="wisdom" class="wisdom"></div>
+      <section class="quote-section">
+        <h2 class="section-title">Spiritual Meaning</h2>
+        <div id="meaning" class="sloka"></div>
+      </section>
       <div id="aiStatus" class="meta"></div>
-    </section>
-
-    <section class="panel">
-      <h2 class="section-title">Share Your Reflection</h2>
-      <div class="row">
-        <div>
-          <label for="name">Your Name</label>
-          <input id="name" placeholder="Enter your name" />
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label for="thought">Your Thought on this Shloka</label>
-          <textarea id="thought" placeholder="What touched you in this verse?"></textarea>
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label for="practice">How will you apply it in life?</label>
-          <textarea id="practice" placeholder="One practical step you will take"></textarea>
-        </div>
-      </div>
-      <button id="postBtn" type="button">Post Comment</button>
-      <div id="status" class="status"></div>
-
-      <h3 class="section-title mt14">Community Comments</h3>
-      <div id="comments"></div>
     </section>
   </main>
 

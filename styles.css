@@ -1,13 +1,14 @@
 :root {
-  --bg: #f5f9ff;
+  --bg: #f8fbff;
   --card: #ffffff;
-  --ink: #24314d;
-  --accent: #ff7e2f;
-  --accent-soft: #ffe8ce;
-  --line: #c9daf7;
+  --ink: #23314f;
+  --accent: #f06f3d;
+  --accent-soft: #fff0d7;
+  --line: #bfd9ee;
   --success: #1c8f51;
-  --accent-2: #2e90ff;
-  --accent-3: #ff5f8f;
+  --accent-2: #236fc7;
+  --accent-3: #d75b8f;
+  --leaf: #3aa978;
 }
 
 * { box-sizing: border-box; }
@@ -17,25 +18,105 @@ body {
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   color: var(--ink);
   background:
-    radial-gradient(circle at 8% 12%, #fff2b6 0%, transparent 28%),
-    radial-gradient(circle at 90% 8%, #d4ebff 0%, transparent 25%),
-    linear-gradient(160deg, #f8fcff 0%, #ecf5ff 40%, #f7fbff 100%);
+    radial-gradient(circle at 8% 12%, rgba(255, 225, 137, 0.68) 0%, transparent 28%),
+    radial-gradient(circle at 90% 8%, rgba(172, 224, 255, 0.72) 0%, transparent 25%),
+    radial-gradient(circle at 82% 86%, rgba(193, 238, 198, 0.65) 0%, transparent 25%),
+    linear-gradient(160deg, #fffdf8 0%, #eef8ff 48%, #fff6fb 100%);
   min-height: 100vh;
 }
 
+.landing-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px 18px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.9) 0 1px, transparent 1px 100%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.75) 0 1px, transparent 1px 100%),
+    radial-gradient(circle at 18% 22%, rgba(255, 229, 134, 0.86) 0%, transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(165, 225, 255, 0.78) 0%, transparent 25%),
+    linear-gradient(155deg, #fffefa 0%, #eef9ff 54%, #fff3f8 100%);
+  background-size: 44px 44px, 44px 44px, auto, auto, auto;
+}
+
+.landing-shell {
+  width: min(1080px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
+  gap: 34px;
+  align-items: center;
+}
+
+.landing-copy {
+  padding: 24px 0;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #146da3;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.welcome-form {
+  margin-top: 26px;
+  max-width: 430px;
+  display: grid;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid rgba(139, 198, 236, 0.72);
+  border-radius: 8px;
+  padding: 18px;
+  box-shadow: 0 18px 38px rgba(36, 49, 77, 0.14);
+}
+
+.landing-krishna {
+  position: relative;
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+}
+
+.landing-krishna::before {
+  content: "";
+  position: absolute;
+  inset: 7% 4% 0;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(255, 236, 141, 0.82), transparent 38%),
+    radial-gradient(circle at 42% 66%, rgba(108, 203, 178, 0.36), transparent 42%);
+  filter: blur(8px);
+}
+
+.landing-krishna img {
+  position: relative;
+  width: min(500px, 100%);
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 4px solid rgba(255, 255, 255, 0.82);
+  box-shadow: 0 24px 52px rgba(35, 49, 79, 0.2);
+}
+
+.app-page[hidden],
+.landing-page[hidden] {
+  display: none;
+}
+
 .container {
-  max-width: 920px;
+  max-width: 980px;
   margin: 0 auto;
-  padding: 24px 16px 40px;
+  padding: 28px 18px 48px;
 }
 
 .hero {
-  background: linear-gradient(140deg, #fff9d9, #ffe0a8 52%, #ffd3a2);
-  border: 2px solid #ffc57b;
-  border-radius: 20px;
-  padding: 20px 20px 14px;
-  margin-bottom: 18px;
-  box-shadow: 0 10px 28px rgba(255, 126, 47, 0.16);
+  background:
+    radial-gradient(circle at 85% 18%, rgba(110, 196, 244, 0.32), transparent 32%),
+    linear-gradient(140deg, #fff8de, #ffe2b6 52%, #ffd8c8);
+  border: 2px solid #ffc67e;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 22px;
+  box-shadow: 0 14px 34px rgba(255, 126, 47, 0.16);
 }
 
 .hero-layout {
@@ -57,24 +138,30 @@ body {
 
 h1 {
   margin: 0 0 8px;
-  color: #b84a12;
-  font-size: clamp(1.4rem, 4vw, 2rem);
-  letter-spacing: 0.2px;
+  color: #a94618;
+  font-size: clamp(2.25rem, 6vw, 4.6rem);
+  line-height: 1.02;
+  letter-spacing: 0;
 }
 
 .sub {
   margin: 0;
-  font-size: 0.98rem;
-  line-height: 1.5;
+  max-width: 620px;
+  font-size: clamp(1.05rem, 2vw, 1.28rem);
+  line-height: 1.55;
 }
 
 .panel {
-  background: var(--card);
+  background: rgba(255, 255, 255, 0.94);
   border: 2px solid var(--line);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 14px;
-  box-shadow: 0 8px 24px rgba(46, 144, 255, 0.08);
+  border-radius: 8px;
+  padding: clamp(18px, 3vw, 30px);
+  margin-bottom: 18px;
+  box-shadow: 0 12px 30px rgba(46, 144, 255, 0.1);
+}
+
+.panel > *:last-child {
+  margin-bottom: 0;
 }
 
 .week-controls {
@@ -82,7 +169,21 @@ h1 {
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.db-tools {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0 0 22px;
+}
+
+#syncDbBtn {
+  width: auto;
+  min-width: 260px;
 }
 
 #prevWeekBtn {
@@ -97,8 +198,12 @@ h1 {
 .row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 26px;
+}
+
+.controls-row {
+  max-width: 360px;
 }
 
 label {
@@ -118,14 +223,19 @@ select, input, textarea, button {
   color: var(--ink);
 }
 
+input[type="number"] {
+  appearance: textfield;
+}
+
 textarea { min-height: 80px; resize: vertical; }
 
 button {
-  background: linear-gradient(135deg, var(--accent), #ff9555);
+  background: linear-gradient(135deg, var(--accent), #e7a037);
   color: #fff;
   border: none;
   cursor: pointer;
   font-weight: 600;
+  box-shadow: 0 8px 18px rgba(240, 111, 61, 0.22);
 }
 
 button:hover { filter: brightness(0.95); }
@@ -133,11 +243,21 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .sloka {
   font-size: clamp(1.05rem, 2.4vw, 1.25rem);
-  line-height: 1.8;
-  background: #fefeff;
+  line-height: 1.9;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
   border: 2px dashed #b9cff7;
-  padding: 12px;
-  border-radius: 10px;
+  padding: clamp(16px, 2.4vw, 24px);
+  border-radius: 8px;
+  margin-bottom: 0;
+}
+
+#transliteration {
+  white-space: pre-line;
+  line-height: 2.05;
+  letter-spacing: 0.01em;
+  font-family: Georgia, "Times New Roman", serif;
+  background: linear-gradient(180deg, #fffdf7 0%, #fff8ea 100%);
+  border-style: solid;
 }
 
 .meta {
@@ -147,7 +267,7 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 .section-title {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--accent-2);
   font-size: 1.08rem;
 }
@@ -156,60 +276,19 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .section-title-row .section-title {
   margin: 0;
 }
 
-.speaker-btn {
-  width: auto;
-  min-width: 42px;
-  padding: 6px 10px;
-  font-size: 1rem;
-  line-height: 1;
+.quote-section {
+  margin-top: 26px;
 }
 
-.mt14 { margin-top: 14px; }
-
-.wisdom {
-  border-left: 5px solid var(--accent-3);
-  background: linear-gradient(135deg, var(--accent-soft), #fff1f7);
-  padding: 10px 12px;
-  border-radius: 8px;
-  line-height: 1.5;
-}
-
-.comment {
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  margin-bottom: 8px;
-  background: #fffefa;
-}
-
-.comment strong { color: var(--accent); }
-
-.comment-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.comment-actions button {
-  width: auto;
-  min-width: 90px;
-  padding: 7px 10px;
-}
-
-.comment-actions .delete {
-  background: #8b2f2f;
-}
-
-.empty {
-  color: #6e6458;
-  font-style: italic;
+.quote-section:first-of-type {
+  margin-top: 0;
 }
 
 .status {
@@ -224,6 +303,24 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
 @media (max-width: 760px) {
+  .landing-shell {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .landing-copy {
+    order: 2;
+    padding-top: 0;
+  }
+
+  .landing-krishna {
+    min-height: auto;
+  }
+
+  .landing-krishna img {
+    width: min(320px, 92%);
+  }
+
   .hero-layout {
     grid-template-columns: 1fr;
   }
@@ -234,5 +331,9 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
 
   .krishna-art svg {
     width: min(170px, 70%);
+  }
+
+  h1 {
+    font-size: clamp(2rem, 12vw, 3.3rem);
   }
 }

@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model BhagwadgitaSloka {
+  id              Int      @id @default(autoincrement())
+  year            Int
+  weekNumber      Int      @map("week_number")
+  reference       String
+  sanskrit        String   @db.Text
+  transliteration Json
+  translation     Json
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([year, weekNumber], name: "year_week_number")
+  @@map("bhagwadgita_slokas")
+}
